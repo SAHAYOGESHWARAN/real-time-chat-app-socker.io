@@ -1,11 +1,10 @@
-// backend/server.js
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
-const connectDB = require('./config/db'); // Ensure this is the correct path
-const userRoutes = require('./routes/userRoutes'); // Ensure userRoutes is defined correctly
-const messageRoutes = require('./routes/messageRoutes'); // Ensure messageRoutes is defined correctly
+const connectDB = require('./config/db');
+const userRoutes = require('./routes/userRoutes'); 
+const messageRoutes = require('./routes/messageRoutes');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
