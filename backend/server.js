@@ -1,10 +1,11 @@
+// backend/server.js
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
-const connectDB = require('./config/db'); // Ensure this is your database connection function
-const userRoutes = require('./routes/userRoutes');
-const { router: messageRoutes, setSocketIO } = require('./routes/messageRoutes');
+const connectDB = require('./config/db'); // Ensure this is the correct path
+const userRoutes = require('./routes/userRoutes'); // Ensure userRoutes is defined correctly
+const messageRoutes = require('./routes/messageRoutes'); // Ensure messageRoutes is defined correctly
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
@@ -23,12 +24,12 @@ app.use(express.json());
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Use routes
-app.use('/api/user', userRoutes);
-app.use('/api/message', messageRoutes);
+// Set the io instance on the app for use in routes
+app.set('io', io);
 
-// Set the io instance for message routes
-setSocketIO(io);
+// Use routes
+app.use('/api/user', userRoutes); // Ensure userRoutes is defined correctly
+app.use('/api/message', messageRoutes); // Ensure messageRoutes is defined correctly
 
 // WebSocket event handling
 io.on('connection', (socket) => {
@@ -37,21 +38,6 @@ io.on('connection', (socket) => {
   // Handle incoming messages
   socket.on('sendMessage', (message) => {
     io.emit('receiveMessage', message); // Broadcast the message to all connected users
-  });
-
-  // Handle video offers
-  socket.on('videoOffer', (offer) => {
-    socket.broadcast.emit('videoOffer', offer); // Send the video offer to other users
-  });
-
-  // Handle video answers
-  socket.on('videoAnswer', (answer) => {
-    socket.broadcast.emit('videoAnswer', answer); // Send the video answer to other users
-  });
-
-  // Handle ICE candidates
-  socket.on('iceCandidate', (candidate) => {
-    socket.broadcast.emit('iceCandidate', candidate); // Send ICE candidates to other users
   });
 
   // Handle disconnection
