@@ -68,5 +68,41 @@ return (
   </div>
 );
 
+const startCall = () => {
+    const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const peerConnection = new RTCPeerConnection();
+  
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    
+    // Add event listeners for ICE candidates and remote stream
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('iceCandidate', event.candidate);
+      }
+    };
+    
+    peerConnection.ontrack = (event) => {
+      const remoteVideo = document.getElementById('remoteVideo');
+      remoteVideo.srcObject = event.streams[0];
+    };
+    
+    // Create offer
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit('videoOffer', offer);
+  };
+  
+  // Receiving call
+  socket.on('videoOffer', async (offer) => {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit('videoAnswer', answer);
+  });
+  
+  socket.on('iceCandidate', (candidate) => {
+    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+  });
+  
 
 export default Chat;
