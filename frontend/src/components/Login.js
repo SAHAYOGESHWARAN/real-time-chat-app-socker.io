@@ -1,34 +1,36 @@
-// frontend/src/components/Login.js
-
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [room, setRoom] = useState('');
   const navigate = useNavigate();
-  
-  const handleLogin = async () => {
-    try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { username, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('username', res.data.username);
-      navigate('/chat');
-    } catch (err) {
-      alert('Invalid credentials');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (username && room) {
+      navigate('/chat', { state: { username, room } });
     }
   };
-  
+
   return (
-    <div className="login-container">
+    <div className="login-form">
       <h2>Login</h2>
-      <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} /><br />
-      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /><br />
-      <button onClick={handleLogin}>Login</button>
-      <p>
-        Don't have an account? <a href="/register">Register</a>
-      </p>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Room"
+          value={room}
+          onChange={(e) => setRoom(e.target.value)}
+        />
+        <button type="submit">Join Chat</button>
+      </form>
     </div>
   );
 };
