@@ -1,10 +1,16 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware/authMiddleware');
-const { sendMessage } = require('../controllers/messageController'); // Assume you have a message controller
+const upload = require('../middleware/upload'); // Import the upload middleware
 const router = express.Router();
+let io; // Declare io here
+
+// Function to set the io instance (to be called from server.js)
+const setSocketIO = (socketIO) => {
+  io = socketIO; // Set the io instance
+};
 
 // File upload endpoint
-router.post('/send-file', authMiddleware, upload.single('file'), async (req, res) => {
+router.post('/send-file', authMiddleware, upload, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ msg: 'No file uploaded' });
@@ -17,11 +23,8 @@ router.post('/send-file', authMiddleware, upload.single('file'), async (req, res
       fileType: req.file.mimetype, // Store the file type for further processing
     };
 
-    // Here, you should save the message to the database (not shown in this snippet)
-    // await Message.create(message); // Save to your database (assuming Message is your model)
-
     // Emit the message through sockets
-    io.emit('receiveMessage', message); // Ensure you have `io` available in this scope
+    io.emit('receiveMessage', message);
 
     return res.status(200).json(message);
   } catch (error) {
@@ -30,4 +33,5 @@ router.post('/send-file', authMiddleware, upload.single('file'), async (req, res
   }
 });
 
-module.exports = router;
+// Export the router and the setSocketIO function
+module.exports = { router, setSocketIO };
