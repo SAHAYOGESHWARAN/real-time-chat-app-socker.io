@@ -1,35 +1,30 @@
-const multer = require('multer');
-const path = require('path');
+// controllers/userController.js
+const User = require('../models/User');
 
-// Set storage engine for avatars
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/avatars/'); // Specify directory for avatar uploads
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname)); // Use original file extension
-  }
-});
+exports.uploadAvatar = async (req, res) => {
+  try {
+    // Check if file is uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
 
-// Define file filter for avatar files
-const fileFilter = (req, file, cb) => {
-  const filetypes = /jpeg|jpg|png|gif/; // Allowed file types
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
+    // Find the user
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Invalid file type, only JPEG, PNG, and GIF are allowed!'), false);
+    // Update the user's avatar path
+    user.avatar = req.file.path; // Save the file path
+    await user.save(); // Save changes to the database
+
+    // Return success response
+    res.status(200).json({ 
+      message: 'Avatar uploaded successfully', 
+      avatar: user.avatar 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
-
-// Set up multer for avatar uploads
-const uploadAvatar = multer({ 
-  storage: storage, 
-  fileFilter: fileFilter,
-  limits: { fileSize: 1024 * 1024 } // Limit file size to 1MB
-}).single('avatar'); // Specify field name for the avatar file
-
-module.exports = uploadAvatar;
