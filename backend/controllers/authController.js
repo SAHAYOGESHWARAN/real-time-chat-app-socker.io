@@ -1,16 +1,12 @@
-
-
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 
-const secret = 'your_jwt_secret_key'; // Replace with your secret key or use environment variables
+const secret = process.env.JWT_SECRET || 'your_jwt_secret_key'; // Use environment variable for secret key
 
 exports.register = async (req, res) => {
   // Validate user input
-  // ... code for validation
-
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -36,19 +32,18 @@ exports.register = async (req, res) => {
 
     // Return JWT token
     const payload = { userId: user.id };
-    jwt.sign(payload, secret, { expiresIn: 360000 }, (err, token) => {
+    jwt.sign(payload, secret, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
-      res.json({ token, username: user.username });
+      res.status(201).json({ token, username: user.username });
     });
   } catch (err) {
-    res.status(500).send('Server error');
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
 exports.login = async (req, res) => {
   // Validate user input
-  // ... code for validation
-
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -59,7 +54,7 @@ exports.login = async (req, res) => {
 
   try {
     // Check if user exists
-    let user = await User.findOne({ username });
+    const user = await User.findOne({ username });
     if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
 
     // Compare passwords
@@ -68,35 +63,12 @@ exports.login = async (req, res) => {
 
     // Return JWT token
     const payload = { userId: user.id };
-    jwt.sign(payload, secret, { expiresIn: 360000 }, (err, token) => {
+    jwt.sign(payload, secret, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
       res.json({ token, username: user.username });
     });
   } catch (err) {
-    res.status(500).send('Server error');
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
-};
-const User = require('../models/User');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-exports.register = async (req, res) => {
-  const { username, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const newUser = new User({ username, password: hashedPassword });
-  await newUser.save();
-  res.status(201).json({ message: 'User registered successfully' });
-};
-
-exports.login = async (req, res) => {
-  const { username, password } = req.body;
-  const user = await User.findOne({ username });
-  if (!user) return res.status(404).json({ message: 'User not found' });
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-  res.json({ token });
 };
