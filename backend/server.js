@@ -1,9 +1,14 @@
+
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 const Message = require('./models/Message');
+
+const authRoutes = require('./routes/auth');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,67 +16,66 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
+// Use routes
+app.use('/api/auth', authRoutes);
+app.use('/api/chat', chatRoutes);
+
+// MongoDB connection
+mongoose
+  .connect('mongodb://localhost:27017/realtime-chat', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.error(err));
+
+// Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: 'http://localhost:3000', // React frontend URL
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Middleware to authenticate socket connections
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (token) {
+    jwt.verify(token, 'your_jwt_secret_key', (err, decoded) => {
+      if (err) return next(new Error('Authentication error'));
+      socket.userId = decoded.userId;
+      next();
+    });
+  } else {
+    next(new Error('Authentication error'));
   }
 });
 
-mongoose.connect('mongodb://localhost:27017/realtime-chat', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected')).catch(err => console.error(err));
-
-// Store connected users
-let connectedUsers = {};
-
-// Load chat history on connection
+// Socket.io connection
 io.on('connection', (socket) => {
   console.log('New client connected');
-  
-  // Add user to connected users
-  socket.on('joinRoom', ({ username, room }) => {
-    connectedUsers[socket.id] = username;
+
+  socket.on('joinRoom', async ({ username, room }) => {
     socket.join(room);
-    
-    // Broadcast to others that user joined
-    socket.broadcast.to(room).emit('message', {
-      username: 'Admin',
-      message: `${username} has joined the chat`,
-      timestamp: new Date()
-    });
-    
-    // Send chat history
-    Message.find().sort({ timestamp: -1 }).limit(50).exec((err, messages) => {
-      if (!err) {
-        socket.emit('loadMessages', messages.reverse());
-      }
-    });
+    socket.room = room;
+
+    // Load message history
+    const messages = await Message.find({ room }).sort({ timestamp: 1 });
+    socket.emit('loadMessages', messages);
+
+    // Notify others
+    socket.broadcast.to(room).emit('notification', `${username} has joined the room.`);
   });
 
-  // Handle chat message
-  socket.on('chatMessage', async (data) => {
-    const message = new Message({ username: data.username, message: data.message, room: data.room });
-    await message.save();
-
-    io.to(data.room).emit('message', {
-      username: data.username,
-      message: data.message,
-      timestamp: new Date()
-    });
+  socket.on('chatMessage', async ({ username, message }) => {
+    const room = socket.room;
+    const msg = new Message({ username, message, room });
+    await msg.save();
+    io.to(room).emit('chatMessage', msg);
   });
 
-  // Typing event
-  socket.on('typing', (data) => {
-    socket.broadcast.to(data.room).emit('typing', data.username);
-  });
-
-  // Handle disconnection
   socket.on('disconnect', () => {
-    const username = connectedUsers[socket.id];
-    console.log(`${username} disconnected`);
-    delete connectedUsers[socket.id];
+    console.log('Client disconnected');
   });
 });
 
