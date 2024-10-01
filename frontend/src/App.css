@@ -1,0 +1,34 @@
+.chat-app {
+    width: 400px;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .chat-header {
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  .chat-body {
+    height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    padding: 10px;
+  }
+  
+  .chat-footer {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .chat-footer input {
+    flex: 1;
+  }
+  
+  .chat-footer button {
+    padding: 5px 10px;
+  }
+  
